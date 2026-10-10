@@ -112,7 +112,7 @@
     $('resetBtn').disabled = true;
     message('authStatus','Enviando instrucciones de recuperación…');
     try {
-      const {error} = await supabase.auth.resetPasswordForEmail(email,{redirectTo:SITE_URL});
+      const {error} = await supabase.auth.resetPasswordForEmail(email,{redirectTo:SITE_URL + '?recovery=1'});
       if(error) throw error;
       message('authStatus','Si ese correo está registrado, recibirás instrucciones para recuperar la contraseña. Revisa también spam o correo no deseado.');
     } catch(err) { message('authStatus',err.message || 'No se pudo enviar el correo de recuperación.'); }
@@ -159,10 +159,15 @@
   const {data:{session},error:sessionError} = await supabase.auth.getSession();
   if(sessionError) message('authStatus',sessionError.message);
   showSession(session);
-  // Respaldo para enlaces de recuperación que regresan con tokens en la URL.
+  // Detectar tanto el tipo de recuperación de Supabase como el marcador de redirección.
   const recoveryParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-  if(recoveryParams.get('type') === 'recovery' || new URLSearchParams(window.location.search).get('type') === 'recovery'){
+  const queryParams = new URLSearchParams(window.location.search);
+  const isRecoveryLink = recoveryParams.get('type') === 'recovery' ||
+    queryParams.get('type') === 'recovery' || queryParams.get('recovery') === '1';
+  if(isRecoveryLink && session){
     activateRecovery();
+  } else if(isRecoveryLink && !session){
+    message('authStatus','El enlace llegó sin una sesión de recuperación válida. Vuelve a solicitar el correo más reciente y abre el enlace completo; si persiste, revisa las URL de redirección en Supabase.');
   }
 </script>
 </body>
