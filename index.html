@@ -144,16 +144,26 @@
     }catch(err){message('cardStatus','No se pudo emitir la tarjeta demo: '+(err.message || 'error desconocido'));}
     finally{$('cardBtn').disabled=false;}
   });
-  const {data:{session}} = await supabase.auth.getSession();
-  showSession(session);
+  function activateRecovery(){
+    $('welcome').classList.add('hidden');
+    $('dashboard').classList.remove('hidden');
+    $('newPasswordForm').classList.remove('hidden');
+    message('passwordStatus','Escribe una contraseña nueva para terminar la recuperación.');
+    setTimeout(()=>$('newPassword').focus(),100);
+  }
+  // Escuchar los eventos antes de consultar la sesión para no perder PASSWORD_RECOVERY.
   supabase.auth.onAuthStateChange((event,session)=>{
     showSession(session);
-    if(event === 'PASSWORD_RECOVERY') {
-      $('newPasswordForm').classList.remove('hidden');
-      $('newPassword').focus();
-      message('passwordStatus','Escribe una contraseña nueva para terminar la recuperación.');
-    }
+    if(event === 'PASSWORD_RECOVERY') activateRecovery();
   });
+  const {data:{session},error:sessionError} = await supabase.auth.getSession();
+  if(sessionError) message('authStatus',sessionError.message);
+  showSession(session);
+  // Respaldo para enlaces de recuperación que regresan con tokens en la URL.
+  const recoveryParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  if(recoveryParams.get('type') === 'recovery' || new URLSearchParams(window.location.search).get('type') === 'recovery'){
+    activateRecovery();
+  }
 </script>
 </body>
 </html>
