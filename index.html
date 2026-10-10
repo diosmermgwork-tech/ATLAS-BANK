@@ -34,6 +34,7 @@
           <label for="password">Contraseña</label><input id="password" type="password" autocomplete="current-password" minlength="8" required placeholder="Mínimo 8 caracteres">
           <button class="primary" id="submitBtn" type="submit">Iniciar sesión</button>
         </form>
+        <button class="secondary" id="resetBtn" type="button" style="margin-top:10px">Olvidé mi contraseña</button>
         <div class="status" id="authStatus" role="status" aria-live="polite"></div>
       </div>
     </section>
@@ -53,6 +54,8 @@
   import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
   const SUPABASE_URL = 'https://zlorzihocghtyqgprjvf.supabase.co';
   const SUPABASE_KEY = 'sb_publishable_aaqmA6ffthPvUL5YsKfp2Q_loqciBFq';
+  // GitHub Pages publica este proyecto en una ruta de repositorio.
+  const SITE_URL = 'https://diosmermgwork-tech.github.io/ATLAS-BANK/';
   const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
   let mode = 'login';
   const $ = id => document.getElementById(id);
@@ -82,7 +85,7 @@
     try {
       const result = mode === 'login'
         ? await supabase.auth.signInWithPassword({email,password})
-        : await supabase.auth.signUp({email,password, options:{emailRedirectTo:location.origin}});
+        : await supabase.auth.signUp({email,password, options:{emailRedirectTo:SITE_URL}});
       if(result.error) throw result.error;
       if(mode === 'signup' && !result.data.session){
         message('authStatus','Cuenta creada. Revisa tu correo para confirmar la dirección y luego inicia sesión.');
@@ -92,6 +95,18 @@
       }
     } catch(err) { message('authStatus',err.message || 'No se pudo completar la solicitud.'); }
     finally { $('submitBtn').disabled = false; }
+  });
+  $('resetBtn').addEventListener('click',async()=>{
+    const email = $('email').value.trim();
+    if(!email){ message('authStatus','Escribe tu correo electrónico arriba y vuelve a pulsar “Olvidé mi contraseña”.'); $('email').focus(); return; }
+    $('resetBtn').disabled = true;
+    message('authStatus','Enviando instrucciones de recuperación…');
+    try {
+      const {error} = await supabase.auth.resetPasswordForEmail(email,{redirectTo:SITE_URL});
+      if(error) throw error;
+      message('authStatus','Si ese correo está registrado, recibirás instrucciones para recuperar la contraseña. Revisa también spam o correo no deseado.');
+    } catch(err) { message('authStatus',err.message || 'No se pudo enviar el correo de recuperación.'); }
+    finally { $('resetBtn').disabled = false; }
   });
   $('logoutBtn').addEventListener('click',async()=>{
     const {error}=await supabase.auth.signOut();
