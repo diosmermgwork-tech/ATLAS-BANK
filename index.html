@@ -44,6 +44,12 @@
         <div class="dashhead"><div><div class="eyebrow">Panel de cliente</div><h2 style="margin:8px 0">Bienvenido a Atlas Bank</h2><p id="userEmail" style="margin:0"></p></div><button class="secondary" id="logoutBtn" style="width:auto;margin:0">Cerrar sesión</button></div>
         <div class="stats"><div class="stat"><small>Cuenta</small><strong>Cuenta demo</strong></div><div class="stat"><small>Saldo disponible</small><strong>$0.00 DEMO</strong></div><div class="stat"><small>Estado</small><strong>Pruebas</strong></div></div>
         <div class="notice">Aviso: los saldos y productos mostrados aquí son demostrativos. No representan fondos reales, una cuenta bancaria real ni una tarjeta válida para compras.</div>
+        <form id="newPasswordForm" class="notice hidden" style="background:#0b1b2d;border-color:#34516f">
+          <strong>Crear una nueva contraseña</strong>
+          <label for="newPassword">Nueva contraseña</label><input id="newPassword" type="password" minlength="8" autocomplete="new-password" required placeholder="Mínimo 8 caracteres">
+          <button class="primary" type="submit">Guardar nueva contraseña</button>
+          <div class="status" id="passwordStatus" role="status" aria-live="polite"></div>
+        </form>
         <button class="primary" id="cardBtn" type="button">Solicitar tarjeta de demostración</button>
         <div class="status" id="cardStatus" role="status" aria-live="polite"></div>
       </div>
@@ -112,6 +118,18 @@
     } catch(err) { message('authStatus',err.message || 'No se pudo enviar el correo de recuperación.'); }
     finally { $('resetBtn').disabled = false; }
   });
+  $('newPasswordForm').addEventListener('submit',async e=>{
+    e.preventDefault();
+    const password = $('newPassword').value;
+    message('passwordStatus','Actualizando contraseña…');
+    try {
+      const {error} = await supabase.auth.updateUser({password});
+      if(error) throw error;
+      $('newPasswordForm').classList.add('hidden');
+      $('newPassword').value = '';
+      message('cardStatus','Tu contraseña se actualizó correctamente.');
+    } catch(err) { message('passwordStatus',err.message || 'No se pudo actualizar la contraseña.'); }
+  });
   $('logoutBtn').addEventListener('click',async()=>{
     const {error}=await supabase.auth.signOut();
     if(error) message('cardStatus',error.message); else {showSession(null);setMode('login');}
@@ -128,7 +146,14 @@
   });
   const {data:{session}} = await supabase.auth.getSession();
   showSession(session);
-  supabase.auth.onAuthStateChange((_event,session)=>showSession(session));
+  supabase.auth.onAuthStateChange((event,session)=>{
+    showSession(session);
+    if(event === 'PASSWORD_RECOVERY') {
+      $('newPasswordForm').classList.remove('hidden');
+      $('newPassword').focus();
+      message('passwordStatus','Escribe una contraseña nueva para terminar la recuperación.');
+    }
+  });
 </script>
 </body>
 </html>
